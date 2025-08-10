@@ -1,2 +1,5 @@
 ~$*.xlsx
 .venv/
+notes.md
+.idea/
+*.ipynb_checkpoints
