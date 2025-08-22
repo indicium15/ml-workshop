@@ -2,12 +2,6 @@
 
 Open Guerrero-et-al.ipynb in Collab:
 
-[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/indicium15/ml-workshop/blob/main/guerrero-et-al.ipynb)
-
-Open Koh-et-al.ipynb in Collab:
-
-[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/indicium15/ml-workshop/blob/main/koh-et-al.ipynb)
-
 This repository contains code, data, and interactive notebooks for an introductory workshop on Machine Learning (ML). The materials are designed for hands-on learning and cover essential ML concepts using real-world datasets.
 
 ## Contents
