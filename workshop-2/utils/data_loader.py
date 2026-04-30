@@ -1,6 +1,8 @@
 """
 DataLoaderWidget: CSV upload + column mapping for any dataset.
 Provides a file path input, preview, and feature/label selectors.
+Defaults to selecting all columns (numeric + categorical) to demonstrate
+mixed-type preprocessing via the encoding controls in PreprocessorWidget.
 """
 import io
 import os
@@ -13,6 +15,9 @@ from IPython.display import display
 _SAMPLE_PATH = os.path.join(
     os.path.dirname(__file__), "..", "sample_data", "student_learning_profiles.csv"
 )
+
+# Columns to always exclude from feature pre-selection (IDs, derived targets)
+_DEFAULT_EXCLUDE = {"student_id", "performance_band"}
 
 
 class DataLoaderWidget:
@@ -74,7 +79,7 @@ class DataLoaderWidget:
         self._feature_select = widgets.SelectMultiple(
             options=[],
             description="Features:",
-            layout=widgets.Layout(width="60%", height="150px"),
+            layout=widgets.Layout(width="70%", height="200px"),
             style={"description_width": "80px"},
         )
         self._label_dropdown = widgets.Dropdown(
@@ -83,11 +88,21 @@ class DataLoaderWidget:
             layout=widgets.Layout(width="60%"),
             style={"description_width": "80px"},
         )
+
+        # Quick-select buttons — both numeric-only and all-columns
         self._select_all_btn = widgets.Button(
-            description="Select all numeric",
+            description="Select all",
             button_style="",
-            layout=widgets.Layout(width="180px"),
+            layout=widgets.Layout(width="130px"),
+            tooltip="Select all columns except ID/label columns",
         )
+        self._select_numeric_btn = widgets.Button(
+            description="Numeric only",
+            button_style="",
+            layout=widgets.Layout(width="130px"),
+            tooltip="Select only numeric (int/float) columns",
+        )
+
         self._confirm_btn = widgets.Button(
             description="Confirm Selection",
             button_style="success",
@@ -99,14 +114,20 @@ class DataLoaderWidget:
         # Wire callbacks
         self._upload_btn.on_click(self._on_load_path)
         self._upload_widget.observe(self._on_file_upload, names="value")
-        self._select_all_btn.on_click(self._on_select_all_numeric)
+        self._select_all_btn.on_click(self._on_select_all)
+        self._select_numeric_btn.on_click(self._on_select_numeric)
         self._confirm_btn.on_click(self._on_confirm)
 
         selector_box = widgets.VBox(
             [
-                widgets.HTML("<b>Select feature columns (hold Ctrl/Cmd for multi-select):</b>"),
+                widgets.HTML(
+                    "<b>Select feature columns</b> "
+                    "<span style='color:#666;font-size:0.85em'>"
+                    "(hold Ctrl/Cmd for multi-select; categorical columns will be "
+                    "encoded in the next step)</span>"
+                ),
                 self._feature_select,
-                self._select_all_btn,
+                widgets.HBox([self._select_all_btn, self._select_numeric_btn]),
             ]
         )
 
@@ -139,9 +160,18 @@ class DataLoaderWidget:
         self.df = df
         cols = list(df.columns)
         numeric_cols = list(df.select_dtypes(include="number").columns)
+        cat_cols = [c for c in cols if c not in numeric_cols]
 
         self._feature_select.options = cols
-        self._feature_select.value = numeric_cols[:min(len(numeric_cols), 10)]
+
+        # Default: all columns except known ID/target columns
+        default_features = [
+            c for c in cols if c not in _DEFAULT_EXCLUDE
+        ]
+        # If the label selector is shown, also exclude performance_band from features
+        if self.show_label_selector and "performance_band" in default_features:
+            default_features = [c for c in default_features if c != "performance_band"]
+        self._feature_select.value = default_features
 
         self._label_dropdown.options = cols
         if "performance_band" in cols:
@@ -149,17 +179,22 @@ class DataLoaderWidget:
 
         self._preview_out.clear_output()
         with self._preview_out:
-            display(
-                widgets.HTML(
-                    f"<b>Loaded {len(df):,} rows × {len(cols)} columns</b>"
-                )
-            )
+            n_num = len(numeric_cols)
+            n_cat = len(cat_cols)
+            display(widgets.HTML(
+                f"<b>Loaded {len(df):,} rows × {len(cols)} columns</b> — "
+                f"<span style='color:#1a6e1a'>{n_num} numeric</span>, "
+                f"<span style='color:#1a4a8a'>{n_cat} categorical</span>"
+                f"<br><small style='color:#666'>Categorical: "
+                f"{', '.join(f'<code>{c}</code>' for c in cat_cols) or 'none'}</small>"
+            ))
             display(df.head())
 
         self._selector_section.layout.display = ""
         self._confirm_btn.disabled = False
         self._status.value = (
-            f'<span style="color:green">✓ Loaded {len(df):,} rows × {len(cols)} columns</span>'
+            f'<span style="color:green">✓ Loaded {len(df):,} rows — '
+            f'{n_num} numeric + {n_cat} categorical columns</span>'
         )
 
     def _on_load_path(self, _btn):
@@ -181,10 +216,22 @@ class DataLoaderWidget:
         except Exception as exc:
             self._status.value = f'<span style="color:red">Error: {exc}</span>'
 
-    def _on_select_all_numeric(self, _btn):
+    def _on_select_all(self, _btn):
+        if self.df is not None:
+            exclude = _DEFAULT_EXCLUDE.copy()
+            if self.show_label_selector and self._label_dropdown.value:
+                exclude.add(self._label_dropdown.value)
+            self._feature_select.value = [
+                c for c in self.df.columns if c not in exclude
+            ]
+
+    def _on_select_numeric(self, _btn):
         if self.df is not None:
             numeric_cols = list(self.df.select_dtypes(include="number").columns)
-            self._feature_select.value = numeric_cols
+            exclude = _DEFAULT_EXCLUDE.copy()
+            if self.show_label_selector and self._label_dropdown.value:
+                exclude.add(self._label_dropdown.value)
+            self._feature_select.value = [c for c in numeric_cols if c not in exclude]
 
     def _on_confirm(self, _btn):
         try:
@@ -213,17 +260,18 @@ class DataLoaderWidget:
             self._confirm_out.clear_output()
             with self._confirm_out:
                 n_feat = len(self.X_df.columns)
+                n_num = len(self.X_df.select_dtypes(include="number").columns)
+                n_cat = n_feat - n_num
                 label_info = (
                     f", label: <b>{self._label_dropdown.value}</b>"
                     if self.show_label_selector
                     else ""
                 )
-                display(
-                    widgets.HTML(
-                        f'<span style="color:green">✓ Confirmed — {n_feat} features{label_info}. '
-                        f"Run the next cell to continue.</span>"
-                    )
-                )
+                display(widgets.HTML(
+                    f'<span style="color:green">✓ Confirmed — {n_feat} features '
+                    f'({n_num} numeric, {n_cat} categorical){label_info}. '
+                    f"Run the next cell to continue.</span>"
+                ))
         except Exception as exc:
             self._confirm_out.clear_output()
             with self._confirm_out:
