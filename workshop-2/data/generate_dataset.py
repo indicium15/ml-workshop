@@ -112,6 +112,23 @@ self_reported_stress_level = _clip(
     np.round(3 - 0.3 * ability + _noise(1, n)), 1, 5
 ).astype(int)
 avg_weekly_study_hours = _clip(15 + 5 * ability + _noise(7, n), 0, 40)
+
+# ── Large-scale raw-count columns (normalisation demonstration) ────────────────
+# Deliberately paired with existing features to expose the scale-domination
+# problem in distance-based algorithms (K-Means, HCA).
+#
+#   total_study_minutes_per_week  ↔  avg_weekly_study_hours  (~60× scale difference)
+#   cumulative_lms_sessions_per_semester  ↔  lms_logins_per_week  (~13× difference)
+#
+# Without StandardScaler, total_study_minutes_per_week (0–2400) contributes
+# ~60× more to Euclidean distance than avg_weekly_study_hours (0–40), even
+# though they encode identical behaviour.
+total_study_minutes_per_week = _clip(
+    avg_weekly_study_hours * 60 + _noise(30, n), 0, 2400
+)
+cumulative_lms_sessions_per_semester = _clip(
+    np.round(lms_logins_per_week * 13 + _noise(15, n)), 0, 300
+).astype(int)
 extracurricular_hours_per_week = _clip(
     5 + 0.5 * _noise(3, n) + np.random.uniform(0, 5, n), 0, 15
 )
@@ -154,6 +171,10 @@ df = pd.DataFrame(
         "tutorial_participation_score": np.round(tutorial_participation_score, 2),
         "office_hours_visits": office_hours_visits,
         "lms_logins_per_week": np.round(lms_logins_per_week, 1),
+        # ── Large-scale raw-count columns (normalisation demonstration) ───────
+        "total_study_minutes_per_week": np.round(total_study_minutes_per_week, 0),
+        "cumulative_lms_sessions_per_semester": cumulative_lms_sessions_per_semester,
+        # ─────────────────────────────────────────────────────────────────────
         "assignment_completion_rate": np.round(assignment_completion_rate, 1),
         # ── Assessment (continuous) ──────────────────────────────────────────
         "avg_assignment_score": np.round(avg_assignment_score, 1),

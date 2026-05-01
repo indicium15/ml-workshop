@@ -205,6 +205,105 @@ def plot_cluster_scatter(X_2d_or_high, labels, method="PCA", title=None, figsize
     return fig
 
 
+def plot_feature_scales(df, title="Feature Value Ranges Before Normalisation"):
+    """
+    Horizontal bar chart showing (max − min) for each numeric feature.
+    Bars are colour-coded by order of magnitude so scale differences are
+    immediately obvious.  Pairs of related features at different scales
+    (e.g. minutes vs hours) are labelled with an annotation.
+    """
+    numeric = df.select_dtypes(include="number")
+    # Drop obvious ID columns
+    numeric = numeric[[c for c in numeric.columns if "id" not in c.lower()]]
+    ranges = (numeric.max() - numeric.min()).sort_values(ascending=True)
+
+    # Colour tiers: <10 → green, 10–100 → orange, 100–500 → tomato, >500 → darkred
+    def _colour(v):
+        if v < 10:
+            return "#2ca02c"
+        elif v < 100:
+            return "#ff7f0e"
+        elif v < 500:
+            return "#d62728"
+        else:
+            return "#8b0000"
+
+    colours = [_colour(v) for v in ranges.values]
+
+    fig, ax = plt.subplots(figsize=(9, max(5, len(ranges) * 0.38)))
+    bars = ax.barh(ranges.index, ranges.values, color=colours, edgecolor="white")
+
+    # Legend for colour tiers
+    from matplotlib.patches import Patch
+    legend_elements = [
+        Patch(facecolor="#2ca02c", label="Range < 10"),
+        Patch(facecolor="#ff7f0e", label="Range 10–100"),
+        Patch(facecolor="#d62728", label="Range 100–500"),
+        Patch(facecolor="#8b0000", label="Range > 500"),
+    ]
+    ax.legend(handles=legend_elements, loc="lower right", fontsize=8)
+
+    # Annotate the scale-pair columns
+    scale_pairs = {
+        "total_study_minutes_per_week": "← same info as avg_weekly_study_hours (×60 scale)",
+        "cumulative_lms_sessions_per_semester": "← same info as lms_logins_per_week (×13 scale)",
+    }
+    for feat, note in scale_pairs.items():
+        if feat in ranges.index:
+            idx = list(ranges.index).index(feat)
+            ax.annotate(
+                note,
+                xy=(ranges[feat], idx),
+                xytext=(ranges[feat] + ranges.max() * 0.02, idx),
+                fontsize=7.5,
+                color="#8b0000",
+                va="center",
+            )
+
+    ax.set_xlabel("Value range (max − min) — raw, unscaled")
+    ax.set_title(title, fontsize=12)
+    ax.axvline(0, color="black", linewidth=0.5)
+    plt.tight_layout()
+    return fig
+
+
+def plot_normalisation_comparison(X_raw_numeric, X_scaled_numeric, labels_raw, labels_scaled,
+                                   title="Effect of Normalisation on K-Means Clusters"):
+    """
+    2×2 grid: PCA scatter (raw vs scaled) side by side, each coloured by
+    cluster label, to make the effect of normalisation visible.
+    """
+    from sklearn.decomposition import PCA
+
+    fig, axes = plt.subplots(1, 2, figsize=(13, 5))
+
+    for ax, X, labels, subtitle in zip(
+        axes,
+        [X_raw_numeric, X_scaled_numeric],
+        [labels_raw, labels_scaled],
+        ["Without normalisation\n(dominated by large-scale features)",
+         "With StandardScaler normalisation\n(all features contribute equally)"],
+    ):
+        X_arr = X.values if hasattr(X, "values") else np.array(X)
+        labels_arr = np.array(labels)
+        pca = PCA(n_components=2, random_state=42)
+        X_2d = pca.fit_transform(X_arr)
+        unique = sorted(set(labels_arr))
+        colours = plt.cm.tab10(np.linspace(0, 1, len(unique)))
+        for i, lbl in enumerate(unique):
+            mask = labels_arr == lbl
+            ax.scatter(X_2d[mask, 0], X_2d[mask, 1], c=[colours[i]],
+                       label=f"Cluster {lbl}", alpha=0.7, s=25, edgecolors="none")
+        ax.set_title(subtitle, fontsize=10)
+        ax.set_xlabel("PC 1")
+        ax.set_ylabel("PC 2")
+        ax.legend(fontsize=8)
+
+    fig.suptitle(title, fontsize=12, y=1.01)
+    plt.tight_layout()
+    return fig
+
+
 def plot_cluster_profile_heatmap(cluster_means_df, title="Cluster Profiles (Feature Means)"):
     fig, ax = plt.subplots(figsize=(max(8, len(cluster_means_df.columns) * 0.6), max(4, len(cluster_means_df) * 0.5 + 1)))
     sns.heatmap(

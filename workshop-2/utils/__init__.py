@@ -9,6 +9,8 @@ from .plotting import (
     plot_elbow_curve,
     plot_silhouette,
     plot_cluster_scatter,
+    plot_feature_scales,
+    plot_normalisation_comparison,
 )
 
 __all__ = [
@@ -23,4 +25,6 @@ __all__ = [
     "plot_elbow_curve",
     "plot_silhouette",
     "plot_cluster_scatter",
+    "plot_feature_scales",
+    "plot_normalisation_comparison",
 ]
