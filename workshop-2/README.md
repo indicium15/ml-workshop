@@ -1,8 +1,8 @@
-# Workshop 2 — HCA, K-Means & Random Forest with Interactive GUIs
+# Workshop 2 — EDA, HCA, K-Means & Random Forest with Interactive GUIs
 
 **NIE Singapore | Audience: Non-technical education researchers and administrative staff**
 
-This workshop provides three self-contained Jupyter notebooks covering the full unsupervised → supervised machine learning pipeline, using a synthetic university student dataset as the running example. All hyperparameter controls are interactive widgets — no code editing required.
+This workshop provides four self-contained Jupyter notebooks covering exploratory data analysis, unsupervised learning, and supervised learning, using a synthetic university student dataset as the running example. All data loading, column selection, preprocessing, and model controls are interactive widgets — no code editing required.
 
 ---
 
@@ -31,17 +31,22 @@ jupyter lab notebooks/
 - Python 3.9+
 - See `requirements.txt` for package versions
 
+### Google Colab
+
+The notebooks can also run in Google Colab. Open a notebook from the GitHub repository or upload the notebook, run the first setup cell, then use the **CSV path** field or **upload** button in Step 1. In Colab, the setup cell will try to locate the workshop files and clone the public repository if the shared `utils/` folder is not already available.
+
 ---
 
 ## Notebooks
 
 | Notebook | Algorithm | Task |
 |---|---|---|
+| `00_EDA_Exploratory_Data_Analysis.ipynb` | Exploratory Data Analysis | Inspect columns, missingness, distributions, correlations, and groups |
 | `01_HCA_Hierarchical_Clustering.ipynb` | Hierarchical Clustering | Discover student archetypes without labels |
 | `02_KMeans_Clustering.ipynb` | K-Means Clustering | Formalise discovered clusters; elbow method |
 | `03_Random_Forest_Classification.ipynb` | Random Forest | Predict performance band from study behaviours |
 
-Run the notebooks in order — each builds on the previous one.
+Recommended order: start with EDA, then run HCA or K-Means for clustering, then Random Forest when you have a label column to predict.
 
 ---
 
@@ -60,14 +65,17 @@ The notebooks are **dataset-agnostic**. Any CSV file can be used:
 1. When the notebook opens, enter the path to your CSV in the **CSV path** field (or use the upload button).
 2. Click **Load CSV** to preview the data.
 3. Use the **feature column selector** to choose which columns to include.
-4. For the Random Forest notebook, select a **label column** (the column to predict).
+4. Click **Confirm Selection** so downstream widgets use the selected columns.
+5. For the Random Forest notebook, select a **label column** (the column to predict).
 
 ### Column mapping tips
 
-- For clustering (Notebooks 1 & 2): select only numeric or ordinal columns. Avoid ID columns.
+- For EDA (Notebook 0): select any columns you want to inspect. You can refresh the column list and choose plots/groups using widgets.
+- For clustering (Notebooks 1 & 2): numeric or ordinal columns are easiest to interpret. Categorical columns can be encoded in preprocessing.
 - For classification (Notebook 3): the label column should be categorical (e.g., a grade band, group membership).
 - Categorical columns will be encoded automatically — choose Label Encoding or One-Hot Encoding in the preprocessing widget.
 - The preprocessing widget handles missing values (filled with 0 after encoding).
+- The Random Forest notebook includes a configurable feature-exclusion selector so users can remove leakage-prone or unavailable-at-prediction-time columns.
 
 ---
 
@@ -95,6 +103,7 @@ workshop-2/
 │   ├── preprocessor.py
 │   └── plotting.py
 ├── notebooks/
+│   ├── 00_EDA_Exploratory_Data_Analysis.ipynb
 │   ├── 01_HCA_Hierarchical_Clustering.ipynb
 │   ├── 02_KMeans_Clustering.ipynb
 │   └── 03_Random_Forest_Classification.ipynb

@@ -205,11 +205,21 @@ class DataLoaderWidget:
         except Exception as exc:
             self._status.value = f'<span style="color:red">Error: {exc}</span>'
 
+    def _uploaded_file_from_value(self, value):
+        """Return the first uploaded file payload across ipywidgets versions."""
+        if not value:
+            return None
+        if isinstance(value, dict):
+            return next(iter(value.values()))
+        if isinstance(value, (list, tuple)):
+            return value[0]
+        return value
+
     def _on_file_upload(self, change):
         if not change["new"]:
             return
         try:
-            uploaded = next(iter(change["new"].values()))
+            uploaded = self._uploaded_file_from_value(change["new"])
             content = uploaded["content"]
             df = pd.read_csv(io.BytesIO(bytes(content)))
             self._load_from_df(df)

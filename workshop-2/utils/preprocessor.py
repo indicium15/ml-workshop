@@ -92,7 +92,7 @@ class PreprocessorWidget:
         .confirmed
     """
 
-    def __init__(self, X_df=None, y=None, force_scale=False, clustering_mode=False):
+    def __init__(self, X_df=None, y=None, force_scale=False, clustering_mode=False, source_loader=None):
         """
         Parameters
         ----------
@@ -100,11 +100,14 @@ class PreprocessorWidget:
         y : pd.Series or None
         force_scale : bool — disables the "None" scaling option (for K-Means)
         clustering_mode : bool — hides test split (for unsupervised tasks)
+        source_loader : DataLoaderWidget or None — when provided, the latest
+            confirmed loader selections are pulled when the user clicks Apply.
         """
         self.X_df = X_df
         self.y = y
         self.force_scale = force_scale
         self.clustering_mode = clustering_mode
+        self.source_loader = source_loader
 
         self.X_train = None
         self.X_test = None
@@ -120,6 +123,13 @@ class PreprocessorWidget:
     def set_data(self, X_df, y=None):
         self.X_df = X_df
         self.y = y
+
+    def _refresh_from_loader(self):
+        if self.source_loader is None:
+            return
+        if getattr(self.source_loader, "confirmed", False):
+            self.X_df = self.source_loader.X_df
+            self.y = self.source_loader.y
 
     def _build_ui(self):
         title = widgets.HTML("<h3>⚙️ Step 2 — Preprocessing</h3>")
@@ -180,6 +190,7 @@ class PreprocessorWidget:
         self._widget = widgets.VBox(children)
 
     def _on_confirm(self, _btn):
+        self._refresh_from_loader()
         if self.X_df is None:
             with self._out:
                 display(widgets.HTML('<span style="color:red">No data loaded yet. Run the data loading cell first.</span>'))
