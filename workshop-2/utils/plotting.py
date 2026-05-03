@@ -1,5 +1,5 @@
 """
-Shared plotting helpers — no widgets, pure matplotlib/seaborn functions.
+Shared plotting helpers 
 """
 import matplotlib.pyplot as plt
 import numpy as np
@@ -305,18 +305,49 @@ def plot_normalisation_comparison(X_raw_numeric, X_scaled_numeric, labels_raw, l
 
 
 def plot_cluster_profile_heatmap(cluster_means_df, title="Cluster Profiles (Feature Means)"):
-    fig, ax = plt.subplots(figsize=(max(8, len(cluster_means_df.columns) * 0.6), max(4, len(cluster_means_df) * 0.5 + 1)))
+    def _pretty_label(label, max_len=18):
+        text = str(label).replace("_", " ")
+        words = text.split()
+        lines = []
+        current = ""
+        for word in words:
+            candidate = f"{current} {word}".strip()
+            if current and len(candidate) > max_len:
+                lines.append(current)
+                current = word
+            else:
+                current = candidate
+        if current:
+            lines.append(current)
+        return "\n".join(lines)
+
+    values = cluster_means_df.astype(float)
+    col_min = values.min(axis=0)
+    col_range = values.max(axis=0) - col_min
+    heat_values = (values - col_min) / col_range.replace(0, np.nan)
+    heat_values = heat_values.fillna(0.5)
+
+    fig_width = max(9, len(values.columns) * 0.9)
+    fig_height = max(4.5, len(values.index) * 0.7 + 2)
+    fig, ax = plt.subplots(figsize=(fig_width, fig_height))
     sns.heatmap(
-        cluster_means_df,
-        annot=True,
+        heat_values,
+        annot=values,
         fmt=".1f",
-        cmap="YlOrRd",
+        cmap="YlGnBu",
+        vmin=0,
+        vmax=1,
         ax=ax,
-        linewidths=0.5,
+        linewidths=0.8,
+        linecolor="white",
         annot_kws={"size": 8},
+        cbar_kws={"label": "Relative mean within each feature"},
     )
-    ax.set_title(title)
-    ax.set_xlabel("Feature")
-    ax.set_ylabel("Cluster")
+    ax.set_title(title, fontsize=13, pad=12)
+    ax.set_xlabel("")
+    ax.set_ylabel("")
+    ax.set_xticklabels([_pretty_label(c) for c in values.columns], rotation=45, ha="right")
+    ax.set_yticklabels([_pretty_label(i, max_len=14) for i in values.index], rotation=0)
+    ax.tick_params(axis="both", length=0)
     plt.tight_layout()
     return fig

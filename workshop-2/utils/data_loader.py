@@ -15,6 +15,7 @@ from IPython.display import display
 _SAMPLE_PATH = os.path.join(
     os.path.dirname(__file__), "..", "sample_data", "student_learning_profiles.csv"
 )
+_SAMPLE_FILENAME = os.path.basename(_SAMPLE_PATH)
 
 # Columns to always exclude from feature pre-selection (IDs, derived targets)
 _DEFAULT_EXCLUDE = {"student_id", "performance_band"}
@@ -29,6 +30,10 @@ class DataLoaderWidget:
     show_label_selector : bool
         If True, show a dropdown for choosing the target/label column
         (used for supervised learning notebooks).
+    default_feature_columns : list[str] or None
+        Optional feature columns to pre-select for the bundled sample dataset.
+        Custom CSVs fall back to selecting all columns except known ID/target
+        columns.
 
     After the user clicks Confirm, the following attributes are populated:
         .df          — full loaded DataFrame
@@ -37,8 +42,9 @@ class DataLoaderWidget:
         .confirmed   — bool flag
     """
 
-    def __init__(self, show_label_selector=True):
+    def __init__(self, show_label_selector=True, default_feature_columns=None):
         self.show_label_selector = show_label_selector
+        self.default_feature_columns = list(default_feature_columns or [])
         self.df = None
         self.X_df = None
         self.y = None
@@ -156,26 +162,40 @@ class DataLoaderWidget:
     # ------------------------------------------------------------------
     # Callbacks
     # ------------------------------------------------------------------
-    def _load_from_df(self, df):
+    def _should_use_default_feature_columns(self, source_filename):
+        if not source_filename:
+            return False
+        return os.path.basename(source_filename) == _SAMPLE_FILENAME
+
+    def _load_from_df(self, df, source_filename=None):
         self.df = df
         cols = list(df.columns)
         numeric_cols = list(df.select_dtypes(include="number").columns)
         cat_cols = [c for c in cols if c not in numeric_cols]
 
         self._feature_select.options = cols
-
-        # Default: all columns except known ID/target columns
-        default_features = [
-            c for c in cols if c not in _DEFAULT_EXCLUDE
-        ]
-        # If the label selector is shown, also exclude performance_band from features
-        if self.show_label_selector and "performance_band" in default_features:
-            default_features = [c for c in default_features if c != "performance_band"]
-        self._feature_select.value = default_features
-
         self._label_dropdown.options = cols
         if "performance_band" in cols:
             self._label_dropdown.value = "performance_band"
+
+        # Workshop defaults only apply to the bundled sample data. Custom
+        # datasets should start broad so accidental name overlap does not hide
+        # the user's other columns.
+        default_features = []
+        if self._should_use_default_feature_columns(source_filename):
+            default_features = [
+                c for c in self.default_feature_columns if c in cols
+            ]
+        if not default_features:
+            default_features = [
+                c for c in cols if c not in _DEFAULT_EXCLUDE
+            ]
+        if self.show_label_selector:
+            label_col = self._label_dropdown.value or "performance_band"
+            default_features = [
+                c for c in default_features if c not in _DEFAULT_EXCLUDE and c != label_col
+            ]
+        self._feature_select.value = default_features
 
         self._preview_out.clear_output()
         with self._preview_out:
@@ -201,7 +221,7 @@ class DataLoaderWidget:
         path = self._path_input.value.strip()
         try:
             df = pd.read_csv(path)
-            self._load_from_df(df)
+            self._load_from_df(df, source_filename=path)
         except Exception as exc:
             self._status.value = f'<span style="color:red">Error: {exc}</span>'
 
@@ -221,8 +241,9 @@ class DataLoaderWidget:
         try:
             uploaded = self._uploaded_file_from_value(change["new"])
             content = uploaded["content"]
+            source_filename = uploaded.get("name") if hasattr(uploaded, "get") else None
             df = pd.read_csv(io.BytesIO(bytes(content)))
-            self._load_from_df(df)
+            self._load_from_df(df, source_filename=source_filename)
         except Exception as exc:
             self._status.value = f'<span style="color:red">Error: {exc}</span>'
 
