@@ -262,7 +262,7 @@ style: |
 
 **Wednesday, 06 May 2026**<br>
 **1.00 pm - 3.30 pm**<br>
-**Link to the Slides: 
+**Link to the Slides: https://tinyurl.com/ml-workshop-slides**
 
 ---
 
@@ -284,7 +284,7 @@ The materials from this workshop are designed to be re-used for your own dataset
 
 We have also generated a synthetic dataset of student performance data for today's exercises. It contains 500 rows and 29 columns covering:
 
-| Column group | Example columns |
+| Column Group | Column Names |
 |---|---|
 | Demographics and context | `year_of_study`, `faculty`, `scholarship_holder`, `internet_access_quality` |
 | Engagement | `lecture_attendance_rate`, `tutorial_attendance_rate`, `lms_logins_per_week` |
@@ -305,18 +305,6 @@ We can use the following Python libraries for this:
 2. [Matplotlib](https://matplotlib.org/stable/users/index.html) for data visualization
 
 Notebook Link: https://tinyurl.com/ml-workshop-notebook-0
-
----
-
-## First Takeaway: Mixed Data Types
-
-<div class="img-full">
-
-![Feature overview](images/10_dataset_overview.png)
-
-</div>
-
-> Pre-processing techniques need to be selected based on the data types in the dataset 
 
 ---
 
@@ -346,7 +334,7 @@ Models need numbers, so categorical columns can be label encoded, one-hot encode
 
 HCA and K-Means compare rows by measuring distance between feature values.
 
-Scaling puts features onto a comparable range, so the model pays attention to patterns across all selected columns.
+Scaling puts features onto a comparable range so the model pays attention to patterns across all selected columns.
 
 <div class="img-full">
 
@@ -440,8 +428,6 @@ K-Means is a clustering algorithm that assigns every row to one of `k` clusters.
 - having to choose `k` before running the model
 - features having different scales
 
-> K-Means gives you a grouping, but you still have to decide whether that grouping is meaningful.
-
 ---
 
 ## K-Means Output: Elbow Plot and Cluster Comparison
@@ -475,14 +461,12 @@ Key Intuition:
 <div class="output-pair">
 <div>
 
-**AIC/BIC-style scores add a complexity penalty to the elbow method.**
-
 - lower score is better
 - fit improves as `k` increases
 - extra clusters are penalised
 - BIC is more conservative than AIC
 
-This keeps the story simple: choose a `k` near the elbow where adding more clusters gives diminishing returns.
+Choose a `k` near the elbow where adding more clusters gives diminishing returns.
 
 </div>
 <div class="output-figure">
@@ -490,12 +474,6 @@ This keeps the story simple: choose a `k` near the elbow where adding more clust
 ![AIC and BIC model selection](images/15_aic_bic_model_selection.png)
 
 </div>
-</div>
-
-<div class="output-intuition">
-
-Presenter note: Explain this as "within-cluster error plus a penalty for extra clusters". It is an elbow-style decision, but less tempted to keep increasing `k`.
-
 </div>
 
 ---
@@ -534,8 +512,6 @@ A decision tree segments data based on yes/no questions. A Random Forest builds 
 - overfitting
 - class imbalance
 
-> Random Forest is useful for prediction, but only if input data is handled properly.
-
 ---
 
 ## Random Forest Output: Confusion Matrix and Feature Importance
@@ -551,12 +527,6 @@ A decision tree segments data based on yes/no questions. A Random Forest builds 
 ![Feature importance](images/08_feature_importance.png)
 
 </div>
-</div>
-
-<div class="output-intuition">
-
-Key Intuition: The confusion matrix shows where predictions were right or wrong; feature importance shows what the model leaned on.
-
 </div>
 
 ---
@@ -582,7 +552,7 @@ Notebook Link: https://tinyurl.com/ml-workshop-notebook-3
 
 ---
 
-## These Notebooks Are Starting Points
+## Using Jupyter Notebooks for Machine Learning
 
 The notebooks are designed to be re-used with your own CSV files.
 
