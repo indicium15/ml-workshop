@@ -262,6 +262,7 @@ style: |
 
 **Wednesday, 06 May 2026**<br>
 **1.00 pm - 3.30 pm**<br>
+**Link to the Slides: 
 
 ---
 
@@ -281,18 +282,17 @@ Today's workshop has two main themes, **concepts** and **implementations**. We w
 
 The materials from this workshop are designed to be re-used for your own datasets. If you have your own data you would like to explore, feel free to try using it here.
 
-We have also generated a synthetic dataset of student performance data for today's exercises. It contains the following features: 
+We have also generated a synthetic dataset of student performance data for today's exercises. It contains 500 rows and 29 columns covering:
 
-| Column | Description |
+| Column group | Example columns |
 |---|---|
-| `lecture_attendance_rate` | How often lectures were attended |
-| `tutorial_attendance_rate` | How often tutorials were attended |
-| `lms_logins_per_week` | How often the LMS was used |
-| `avg_weekly_study_hours` | Study time in hours |
-| `total_study_minutes_per_week` | Study time in minutes |
-| `midterm_score` | Midterm score |
-| `avg_score` | Average score |
-| `performance_band` | Feature we will look to predict |
+| Demographics and context | `year_of_study`, `faculty`, `scholarship_holder`, `internet_access_quality` |
+| Engagement | `lecture_attendance_rate`, `tutorial_attendance_rate`, `lms_logins_per_week` |
+| Study and workload | `avg_weekly_study_hours`, `part_time_work_hours`, `self_reported_stress_level` |
+| Assessment scores | `avg_assignment_score`, `midterm_score`, `final_exam_score`, `avg_score` |
+| Target/outcome | `performance_band` |
+
+The default clustering notebooks use behaviour and workload columns. The Random Forest notebook also includes selected context columns and leaves score columns for leakage review.
 
 ---
 
@@ -304,6 +304,8 @@ We can use the following Python libraries for this:
 1. [Pandas](https://pandas.pydata.org/docs/user_guide/index.html) for data loading and manipulation
 2. [Matplotlib](https://matplotlib.org/stable/users/index.html) for data visualization
 
+Notebook Link: https://tinyurl.com/ml-workshop-notebook-0
+
 ---
 
 ## First Takeaway: Mixed Data Types
@@ -314,13 +316,11 @@ We can use the following Python libraries for this:
 
 </div>
 
-> An extensive knowledge of the dataset you are working with is essential to determine the appropriate pre-processing techniques that need to be applied. 
+> Pre-processing techniques need to be selected based on the data types in the dataset 
 
 ---
 
 ## Dataset Pre-Processing
-
-The model does not see a spreadsheet the way we do. Before applying any machine learning techniques, we have to decide how to represent and transform each feature in our dataset.
 
 | Column type | Example | Typical question | Possible action |
 |---|---|---|---|
@@ -336,11 +336,9 @@ The model does not see a spreadsheet the way we do. Before applying any machine 
 
 Models need numbers, so categorical columns can be label encoded, one-hot encoded, or dropped.
 
-<div class="img-full">
-
-![Categorical encoding before and after preprocessing](images/12_preprocessing_categorical_encoding.png)
-
-</div>
+- **Label encoding:** replace each category with a number, such as `Low = 0`, `Medium = 1`, `High = 2`.
+- **One-hot encoding:** create one 0/1 column per category, such as `faculty_Engineering` or `faculty_Business`.
+- **Dropping:** remove a categorical column when it is not useful, has too many messy categories, or would add noise.
 
 ---
 
@@ -402,9 +400,6 @@ Hierarchical Clustering Analysis is a bottom-up algorithm that starts by treatin
 - features having different scales
 - branches not being clearly separated
 
-> Use HCA as a first look at possible groupings.
-
-
 ---
 
 ## HCA Output: Dendrogram
@@ -427,6 +422,8 @@ Key Intuition: Reading the graph bottom-up
 - apply preprocessing
 - run HCA
 - inspect the dendrogram and cluster profiles
+
+Notebook Link: https://tinyurl.com/ml-workshop-notebook-1
 
 ---
 
@@ -473,6 +470,36 @@ Key Intuition:
 
 ---
 
+## K-Means Model Selection: AIC/BIC Elbow
+
+<div class="output-pair">
+<div>
+
+**AIC/BIC-style scores add a complexity penalty to the elbow method.**
+
+- lower score is better
+- fit improves as `k` increases
+- extra clusters are penalised
+- BIC is more conservative than AIC
+
+This keeps the story simple: choose a `k` near the elbow where adding more clusters gives diminishing returns.
+
+</div>
+<div class="output-figure">
+
+![AIC and BIC model selection](images/15_aic_bic_model_selection.png)
+
+</div>
+</div>
+
+<div class="output-intuition">
+
+Presenter note: Explain this as "within-cluster error plus a penalty for extra clusters". It is an elbow-style decision, but less tempted to keep increasing `k`.
+
+</div>
+
+---
+
 ## K-Means: Jupyter Notebook Walkthrough
 
 **Notebook 2**
@@ -482,6 +509,8 @@ Key Intuition:
 - inspect the elbow plot
 - choose `k`
 - compare cluster profiles
+
+Notebook Link: https://tinyurl.com/ml-workshop-notebook-2
 
 ---
 
@@ -542,6 +571,8 @@ Key Intuition: The confusion matrix shows where predictions were right or wrong;
 - compare feature importance
 - test what happens when leakage is introduced
 
+Notebook Link: https://tinyurl.com/ml-workshop-notebook-3
+
 ---
 
 <!-- _class: section -->
@@ -586,5 +617,5 @@ Today we:
 - explored when to use unsupervised or supervised learning techniques
 - used HCA to explore possible groupings
 - used K-Means to create and compare clusters
-- used Random Forest to predict rules that lead to a known outcome
+- used Random Forest to predict a known outcome and inspect influential features
 - discussed how to adapt the notebooks for your own datasets
