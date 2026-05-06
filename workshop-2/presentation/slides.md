@@ -207,6 +207,23 @@ style: |
   section.byo-dataset h2 { margin-bottom: 14px; }
   section.byo-dataset p { margin-bottom: 14px; }
   section.byo-dataset .data-table table { font-size: 0.7em; }
+  section.dataset-practices {
+    padding: 36px 54px;
+    font-size: 24px;
+  }
+  section.dataset-practices h2 { margin-bottom: 10px; }
+  section.dataset-practices ul { margin-bottom: 12px; }
+  section.dataset-practices .data-table table {
+    table-layout: fixed;
+    width: 100% !important;
+    font-size: 0.56em;
+    line-height: 1.16;
+  }
+  section.dataset-practices th,
+  section.dataset-practices td {
+    padding: 5px 7px;
+    overflow-wrap: anywhere;
+  }
   /* ── Image sizing helpers ── */
   .img-center { text-align: center; }
   .img-center img { max-width: 100%; max-height: 360px; border-radius: 5px; box-shadow: 0 8px 22px rgba(17,28,47,0.12); }
@@ -295,6 +312,25 @@ We have also generated a synthetic dataset of student performance data for today
 The default clustering notebooks use behaviour and workload columns. The Random Forest notebook also includes selected context columns and leaves score columns for leakage review.
 
 ---
+<!-- _class: dataset-practices -->
+## Dataset Practices
+- Rows = observations
+- Columns = features
+- One row should correspond with one observation
+
+<div class="data-table">
+
+| student_id | age | year | faculty | lecture_attendance_rate | avg_weekly_study_hours | avg_score | stress | performance_band |
+|---:|---:|---:|---|---:|---:|---:|---:|---|
+| 1000 | 24 | 2 | Business | 81.4 | 19.6 | 73.2 | 3 | Merit |
+| 1001 | 24 | 2 | Business | 53.4 | 13.8 | 45.9 | 4 | Pass |
+| 1002 | 18 | 3 | Science | 85.8 | 22.1 | 89.3 | 2 | Distinction |
+| 1003 | 21 | 3 | Arts | 77.1 | 16.2 | 73.9 | 2 | Merit |
+| 1004 | 24 | 3 | Arts | 45.4 | 5.5 | 34.6 | 4 | At-Risk |
+
+</div>
+
+---
 
 ## Exercise 1: Exploratory Data Analysis
 
@@ -305,6 +341,8 @@ We can use the following Python libraries for this:
 2. [Matplotlib](https://matplotlib.org/stable/users/index.html) for data visualization
 
 Notebook Link: https://tinyurl.com/ml-workshop-notebook-0
+
+
 
 ---
 
@@ -341,6 +379,17 @@ Scaling puts features onto a comparable range so the model pays attention to pat
 ![Scaling before and after preprocessing](images/14_preprocessing_scaling_before_after.png)
 
 </div>
+
+---
+## Normalization Approaches
+
+Normalization changes numeric features so scale does not dominate the model.
+
+| Approach | What it does | Useful when |
+|---|---|---|
+| **Z-scaling / standard scaling** | Converts values to mean `0`, standard deviation `1`: `z = (x - mean) / std` | K-Means, HCA, PCA, many distance-based methods |
+| **Min-max scaling** | Rescales values to a fixed range, often `0` to `1` | Features have known bounds or dashboards need easy interpretation |
+| **Log transform** | Compresses large values before scaling | Values are highly skewed, such as counts or income-like variables |
 
 ---
 
@@ -456,22 +505,49 @@ Key Intuition:
 
 ---
 
-## K-Means Model Selection: AIC/BIC Elbow
+## K-Means Model Selection: AIC/BIC
 
 <div class="output-pair">
 <div>
 
-- lower score is better
-- fit improves as `k` increases
-- extra clusters are penalised
-- BIC is more conservative than AIC
+**AIC** = Akaike Information Criterion  
+**BIC** = Bayesian Information Criterion
 
-Choose a `k` near the elbow where adding more clusters gives diminishing returns.
+Run K-Means across a range of `k` values and compare information criteria estimated from the fitted inertia.
+
+`score = -2 x log-likelihood + complexity penalty`
+
+| Criterion | Penalty | Tendency |
+|---|---|---|
+| **AIC** | `2 x parameters` | lighter penalty; can pick more clusters |
+| **BIC** | `ln(N) x parameters` | heavier penalty; more conservative |
+
+Lower is better. Look for the elbow where AIC/BIC stop improving sharply, then check that the cluster choice remains interpretable.
 
 </div>
 <div class="output-figure">
 
 ![AIC and BIC model selection](images/15_aic_bic_model_selection.png)
+
+</div>
+</div>
+
+---
+
+## K-Means Model Selection: Other Metrics
+
+<div class="output-pair">
+<div>
+
+- **Silhouette**: higher means points fit their own cluster better than neighbouring clusters.
+- **Davies-Bouldin**: lower means clusters are more compact and separated.
+- **Calinski-Harabasz**: higher means stronger between-cluster separation.
+- **Homogeneity, completeness, V-measure** compare clusters with `performance_band` when a known label is available.
+
+</div>
+<div class="output-figure">
+
+![K-Means validation metrics](images/16_kmeans_validation_metrics.png)
 
 </div>
 </div>
@@ -484,7 +560,7 @@ Choose a `k` near the elbow where adding more clusters gives diminishing returns
 - load the dataset
 - choose feature columns
 - apply required scaling
-- inspect the elbow plot
+- inspect the metric dashboard
 - choose `k`
 - compare cluster profiles
 

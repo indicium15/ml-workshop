@@ -11,7 +11,15 @@ import seaborn as sns
 from scipy.cluster.hierarchy import linkage
 from sklearn.cluster import KMeans
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import (
+    calinski_harabasz_score,
+    completeness_score,
+    confusion_matrix,
+    davies_bouldin_score,
+    homogeneity_score,
+    silhouette_score,
+    v_measure_score,
+)
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 
@@ -298,41 +306,77 @@ def build_aic_bic_model_selection(X_scaled):
     k_range = range(1, 11)
     rows = []
     for k in k_range:
-        model = KMeans(
-            n_clusters=k,
-            n_init=20,
-            random_state=42,
-        )
-        model.fit(X_scaled)
-        aic, bic = kmeans_information_criteria(model, X_scaled)
-        rows.append(
-            {
-                "k": k,
-                "AIC": aic,
-                "BIC": bic,
-            }
-        )
+        km = KMeans(n_clusters=k, init="k-means++", n_init=10, random_state=42).fit(X_scaled)
+        aic, bic = kmeans_information_criteria(km, X_scaled)
+        rows.append({"k": k, "AIC": aic, "BIC": bic, "Inertia": km.inertia_})
 
     scores = pd.DataFrame(rows)
-    best_aic = scores.loc[scores["AIC"].idxmin()]
-    best_bic = scores.loc[scores["BIC"].idxmin()]
 
     fig, ax = plt.subplots(figsize=(10.8, 5.6))
-    ax.plot(scores["k"], scores["AIC"], marker="o", linewidth=2.2, color="#2b9dcc", label="AIC-style score")
-    ax.plot(scores["k"], scores["BIC"], marker="o", linewidth=2.2, color="#c97a1a", label="BIC-style score")
-    ax.axvline(best_aic["k"], color="#2b9dcc", linestyle="--", alpha=0.45)
-    ax.axvline(best_bic["k"], color="#c97a1a", linestyle="--", alpha=0.45)
-    ax.scatter(best_aic["k"], best_aic["AIC"], s=95, color="#2b9dcc", edgecolor="white", zorder=4)
-    ax.scatter(best_bic["k"], best_bic["BIC"], s=95, color="#c97a1a", edgecolor="white", zorder=4)
-    ax.text(best_aic["k"] + 0.15, best_aic["AIC"], f"AIC min: {int(best_aic['k'])}", color="#203653")
-    ax.text(best_bic["k"] + 0.15, best_bic["BIC"], f"BIC min: {int(best_bic['k'])}", color="#203653")
-    ax.set_title("K-Means AIC/BIC-style elbow: fit improves, complexity is penalised", fontsize=14, pad=12)
+    ax.plot(scores["k"], scores["AIC"], marker="o", linewidth=2.2, color="#2b9dcc", label="AIC")
+    ax.plot(scores["k"], scores["BIC"], marker="s", linewidth=2.2, color="#c97a1a", label="BIC")
+    ax.set_title("AIC/BIC Elbow Method: look for where improvement slows", fontsize=14, pad=12)
     ax.set_xlabel("Number of clusters (k)")
-    ax.set_ylabel("Information criterion score (lower is better)")
+    ax.set_ylabel("Information criterion (lower is better)")
     ax.set_xticks(list(k_range))
     ax.grid(alpha=0.22)
     ax.legend(frameon=False)
     ax.spines[["top", "right"]].set_visible(False)
+    fig.tight_layout()
+    return fig
+
+
+def build_kmeans_validation_metrics(X_scaled, y_known):
+    k_range = range(2, 11)
+    rows = []
+    for k in k_range:
+        labels = KMeans(n_clusters=k, init="k-means++", n_init=20, random_state=37).fit_predict(X_scaled)
+        rows.append(
+            {
+                "k": k,
+                "Silhouette": silhouette_score(X_scaled, labels),
+                "Davies-Bouldin": davies_bouldin_score(X_scaled, labels),
+                "Calinski-Harabasz": calinski_harabasz_score(X_scaled, labels),
+                "Homogeneity": homogeneity_score(y_known, labels),
+                "Completeness": completeness_score(y_known, labels),
+                "V-measure": v_measure_score(y_known, labels),
+            }
+        )
+
+    scores = pd.DataFrame(rows)
+
+    fig, axes = plt.subplots(2, 2, figsize=(11.4, 7.2))
+    ax = axes[0, 0]
+    ax.plot(scores["k"], scores["Silhouette"], marker="o", linewidth=2.1, color="#2f855a")
+    ax.set_title("Silhouette: higher is better", fontsize=12, pad=10)
+    ax.set_ylabel("Score")
+
+    ax = axes[0, 1]
+    ax.plot(scores["k"], scores["Davies-Bouldin"], marker="o", linewidth=2.1, color="#b83232")
+    ax.set_title("Davies-Bouldin: lower is better", fontsize=12, pad=10)
+    ax.set_ylabel("Index")
+
+    ax = axes[1, 0]
+    ax.plot(scores["k"], scores["Calinski-Harabasz"], marker="o", linewidth=2.1, color="#6b46c1")
+    ax.set_title("Calinski-Harabasz: higher is better", fontsize=12, pad=10)
+    ax.set_xlabel("Number of clusters (k)")
+    ax.set_ylabel("Score")
+
+    ax = axes[1, 1]
+    ax.plot(scores["k"], scores["Homogeneity"], marker="s", linewidth=1.9, color="#4c78a8", label="Homogeneity")
+    ax.plot(scores["k"], scores["Completeness"], marker="^", linewidth=1.9, color="#f58518", label="Completeness")
+    ax.plot(scores["k"], scores["V-measure"], marker="d", linewidth=1.9, color="#54a24b", label="V-measure")
+    ax.set_title("Compared with performance_band", fontsize=12, pad=10)
+    ax.set_xlabel("Number of clusters (k)")
+    ax.set_ylabel("Score")
+    ax.legend(frameon=False, fontsize=9)
+
+    for ax in axes.ravel():
+        ax.set_xticks(list(k_range))
+        ax.grid(alpha=0.22)
+        ax.spines[["top", "right"]].set_visible(False)
+
+    fig.suptitle("K-Means validation metrics across k", fontsize=15, y=1.02)
     fig.tight_layout()
     return fig
 
@@ -428,6 +472,10 @@ def main():
     )
     save(build_kmeans_vs_bands(df, X_cluster), "07_kmeans_vs_bands.png")
     save(build_aic_bic_model_selection(X_cluster), "15_aic_bic_model_selection.png")
+    save(
+        build_kmeans_validation_metrics(X_cluster, df["performance_band"]),
+        "16_kmeans_validation_metrics.png",
+    )
 
     X_raw = df[HCA_KMEANS_FEATURES].copy()
     labels_raw = KMeans(n_clusters=4, random_state=42, n_init=20).fit_predict(X_raw)
